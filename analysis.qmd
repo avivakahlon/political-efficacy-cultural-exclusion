@@ -1,0 +1,414 @@
+---
+title: "Perceived Cultural Exclusion and Political Efficacy among First-Generation Immigrants in Europe"
+author: "Aviva Kahlon"
+format: pdf
+toc: true
+toc-depth: 2
+---
+
+## Introduction
+
+Political efficacy, defined as the belief that one understands political processes and can meaningfully participate in them, is a core component of democratic citizenship. Individuals with higher political efficacy are more likely to engage in civic activities and express confidence in political institutions, while lower levels are associated with disengagement and political alienation. Understanding the sources of political efficacy is therefore central to evaluating democratic inclusion.
+
+For immigrant populations, political efficacy is shaped not only by formal rights and institutional access, but also by everyday social experiences within the host society. Prior research suggests that experiences of discrimination, marginalization, and social exclusion can undermine individuals’ sense of agency and weaken confidence in political systems. These dynamics are particularly relevant for first-generation immigrants, who often navigate unfamiliar cultural and political environments while confronting barriers to social integration.
+
+This research paper focuses on the relationship between cultural exclusion and political efficacy among first-generation immigrants in Europe. This topic was chosen because subjective experiences of exclusion, such as perceived discrimination and lack of belonging, are often overlooked in favor of formal indicators of political integration. By emphasizing how immigrants experience their social environment, this paper aims to shed light on an important but underexplored dimension of political inequality.
+
+The European context provides a valuable setting for this analysis, given its diverse immigrant populations and ongoing debates surrounding integration and national identity. Examining political efficacy within this context contributes to broader discussions of democratic inclusion and highlights the importance of social integration for sustaining participatory political systems.
+
+## Research Question
+
+This research paper asks whether ***perceived cultural exclusion is associated with political efficacy among first-generation immigrants in Europe.***
+
+Political efficacy reflects individuals’ confidence in their ability to understand and engage with political processes. Cultural exclusion, in this context, refers to subjective experiences of discrimination and feelings of social distance or lack of belonging within the host society. By focusing on first-generation immigrants, this research examines how everyday social experiences relate to political attitudes in a population that often faces unique integration challenges. Understanding this relationship provides insight into how social inclusion, beyond formal political rights, may shape political engagement in democratic societies.
+
+## Hypothesis
+
+This paper hypothesizes that ***higher levels of perceived cultural exclusion are associated with lower political efficacy among first-generation immigrants in Europe.***
+
+This expectation is consistent with prior research on political integration and social inclusion. Studies on political efficacy suggest that individuals’ confidence in understanding and engaging with politics is shaped not only by formal political rights, but also by their perceived position within society (Campbell et al., 1954; Verba, Schlozman, and Brady, 1995). For immigrant populations, experiences of discrimination and social marginalization have been shown to weaken trust in political institutions and reduce feelings of political empowerment (Bloemraad, 2006; Maxwell, 2010). When immigrants perceive exclusion based on ethnicity, language, or cultural background, they may be less likely to view political systems as accessible or responsive, leading to lower political efficacy. Building on this literature, this study expects perceived cultural exclusion to be negatively associated with political efficacy among first-generation immigrants.
+
+## Literature Review
+
+Political efficacy has long been identified as a central component of democratic participation. In *The Voter Decides*, Campbell, Gurin, and Miller (1954) define political efficacy as individuals’ belief in their ability to understand and influence political processes, showing that higher efficacy is associated with greater political engagement. Building on this foundation, Verba, Schlozman, and Brady (1995), in *Voice and Equality*, demonstrate that political efficacy is unevenly distributed across social groups and closely tied to broader patterns of social and economic inequality. Together, these studies establish political efficacy as a socially conditioned political attitude rather than a purely individual characteristic.
+
+Research on immigration and political integration further emphasizes the importance of social context. In *Becoming a Citizen*, Bloemraad (2006) shows that institutional factors such as citizenship policies and access to political rights facilitate immigrant political participation, but also notes that formal inclusion alone does not fully explain variation in political engagement. This finding highlights the role of everyday social experiences in shaping political attitudes among immigrants.
+
+A growing body of research explicitly links experiences of discrimination to political attitudes. In a study of immigrant political participation in Western Europe, Maxwell (2010) finds that perceived discrimination is associated with lower political trust and weaker political engagement among immigrants. Similarly, Heath et al. (2013) demonstrate that ethnic and racial minorities who experience social exclusion report weaker connections to political institutions. These studies suggest that discrimination and exclusion can undermine immigrants’ sense of political agency.
+
+While prior research has examined discrimination and political attitudes separately, fewer studies focus on how multiple dimensions of cultural exclusion jointly relate to political efficacy. By integrating perceptions of discrimination with feelings of social belonging, this study builds on existing scholarship to examine how cumulative experiences of cultural exclusion are associated with political efficacy among first-generation immigrants in Europe.
+
+## Descriptive Statistics 
+
+This section describes the data and key variables used in the analysis. The study uses data from Round 10 of the European Social Survey (ESS), a cross-national survey designed to measure attitudes, beliefs, and behavior patterns across European countries. The analytic sample is restricted to first-generation immigrants, defined as respondents who report being born outside their current country of residence. After cleaning and excluding missing observations on key variables, the final sample consists of 3,087 respondents across multiple European countries.
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(skimr)
+```
+
+Political efficacy is measured using respondents’ self-reported confidence in their ability to participate in politics. Perceived cultural exclusion is operationalized through a composite index combining experiences of discrimination across multiple domains and feelings of social belonging. Control variables include age, gender, years of education, household income, and country of residence.
+
+```{r}
+ess_raw <- read_csv("ESS10e03_2.csv") |> 
+  clean_names()
+
+head(ess_raw)
+```
+
+```{r}
+#Filter to first-generation immigrants
+#brncntr: 1 = born in country, 2 = born abroad
+ess_imm <- ess_raw |> 
+  filter(brncntr == 2)
+```
+
+```{r}
+ess_sub <- ess_imm |> 
+  select(
+    # Outcome
+    psppsgva,
+
+    # Discrimination variables
+    dscrrce, dscrntn, dscrrlg, dscrlng, dscretn,
+
+    # Belonging
+    feethngr,
+
+    # Controls
+    agea, gndr, eduyrs, hinctnta, cntry
+  )
+```
+
+```{r}
+disc_vars <- c("dscrrce","dscrntn","dscrrlg","dscrlng","dscretn")
+
+ess_sub <- ess_sub |> 
+  mutate(across(all_of(disc_vars),
+                ~ ifelse(.x %in% c(7, 8, 9), NA, .x)))
+
+# Belonging: 77, 88, 99 = missing
+ess_sub <- ess_sub |> 
+  mutate(
+    feethngr = ifelse(feethngr %in% c(77, 88, 99), NA, feethngr)
+  )
+
+# Outcome (political efficacy)
+ess_sub <- ess_sub |>
+  mutate(
+    psppsgva = ifelse(psppsgva %in% c(77, 88, 99), NA, psppsgva)
+  )
+
+# Controls: education + income
+ess_sub <- ess_sub |> 
+  mutate(
+    eduyrs = ifelse(eduyrs %in% c(77, 88, 99), NA, eduyrs),
+    hinctnta = ifelse(hinctnta %in% c(77, 88, 99), NA, hinctnta)
+  )
+
+# Gender recode
+ess_sub <- ess_sub |> 
+  mutate(
+    gndr = case_when(
+      gndr == 1 ~ "Male",
+      gndr == 2 ~ "Female",
+      TRUE ~ NA_character_
+    ),
+    gndr = factor(gndr)
+  )
+
+```
+
+```{r}
+#Reverse-code belonging
+max_val <- max(ess_sub$feethngr, na.rm = TRUE)
+
+ess_sub <- ess_sub |> 
+  mutate(
+    feethngr_rev = max_val - feethngr
+  )
+```
+
+```{r}
+# 6. Create Cultural Exclusion Index
+ess_sub <- ess_sub |>
+  mutate(
+    exclusion_index = rowMeans(
+      cbind(
+        dscrrce,
+        dscrntn,
+        dscrrlg,
+        dscrlng,
+        dscretn,
+        feethngr_rev
+      ),
+      na.rm = TRUE
+    )
+  )
+
+```
+
+```{r}
+ess_clean <- ess_sub |> 
+  filter(
+    !is.na(psppsgva),
+    !is.na(exclusion_index)
+  )
+```
+
+```{r}
+glimpse(ess_clean)
+skim(ess_clean)
+nrow(ess_clean)
+```
+
+```{r}
+ess_clean |>
+  select(psppsgva, exclusion_index, agea, eduyrs, hinctnta) |>
+  summary()
+```
+
+## Visualization of Key Variables
+
+```{r}
+ggplot(ess_clean, aes(x = psppsgva)) +
+  geom_histogram(bins = 20, fill = "#4A90E2", color = "white") +
+  labs(
+    title = "Figure 1\nDistribution of Political Efficacy Among Immigrants",
+    x = "Political Efficacy (0–10)",
+    y = "Count"
+  ) +
+  theme_minimal()
+```
+
+**Figure 1:** Shows the distribution of political efficacy among first-generation immigrants in the sample. Political efficacy is measured on a 0–10 scale, with higher values indicating greater confidence in one’s understanding of politics.
+
+```{r}
+ggplot(ess_clean, aes(x = exclusion_index)) +
+  geom_histogram(bins = 20, fill = "#E24A4A", color = "white") +
+  labs(
+    title = "Figure 2\nDistribution of Cultural Exclusion Index",
+    x = "Exclusion Index (higher = more exclusion)",
+    y = "Count"
+  ) +
+  theme_minimal()
+```
+
+**Figure 2:** Presents the distribution of the cultural exclusion index. Higher values indicate greater perceived exclusion, reflecting cumulative experiences of discrimination and weaker feelings of social belonging.
+
+Together, Figures 1 and 2 illustrate substantial variation in both political efficacy and perceived cultural exclusion among first-generation immigrants. This variation provides a basis for examining the relationship between exclusion and political efficacy in subsequent regression analyses.
+
+```{r}
+cor(ess_clean$psppsgva, ess_clean$exclusion_index, use = "complete.obs")
+#more exclusion → lower efficacy.
+```
+
+To further explore the relationship between perceived cultural exclusion and political efficacy, political efficacy is examined across grouped levels of the cultural exclusion index. The violin plot displays the distribution of political efficacy for respondents reporting low, moderate, and high levels of perceived cultural exclusion, allowing for a comparison of central tendency and dispersion across groups.
+
+```{r}
+ess_clean <- ess_clean |>
+  mutate(
+    exclusion_cat = ntile(exclusion_index, 4),
+    exclusion_cat = factor(exclusion_cat,
+                           labels = c("Low", "Moderate", "High", "Very High"))
+  )
+
+ess_clean <- ess_clean |>
+  mutate(
+    exclusion_cat = case_when(
+      exclusion_index < quantile(exclusion_index, 0.33, na.rm = TRUE) ~ "Low",
+      exclusion_index < quantile(exclusion_index, 0.66, na.rm = TRUE) ~ "Medium",
+      TRUE ~ "High"
+    ),
+    exclusion_cat = factor(exclusion_cat, levels = c("Low", "Medium", "High"))
+  )
+
+library(ggplot2)
+
+ggplot(ess_clean, aes(x = exclusion_cat, y = psppsgva, fill = exclusion_cat)) +
+  geom_violin(trim = FALSE, alpha = 0.7) +
+  stat_summary(fun = mean, geom = "point", color = "black", size = 2) +
+  geom_boxplot(width = 0.1, fill = "white", outlier.size = 0.8) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Figure 3\nDistribution of Political Efficacy \nby Cultural Exclusion Level",
+    x = "Cultural Exclusion Category",
+    y = "Political Efficacy"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+```
+
+**Figure 3:** Shows that political efficacy tends to be lower among immigrants reporting higher levels of perceived cultural exclusion. Respondents in the high-exclusion group exhibit lower median political efficacy compared to those in the low-exclusion group, along with a slightly narrower distribution. While this descriptive pattern does not establish causality, it provides preliminary evidence consistent with the hypothesized negative association between cultural exclusion and political efficacy.
+
+## Directed Acyclic Graph (DAG)
+
+To clarify the assumptions underlying the regression analysis, a directed acyclic graph (DAG) is used to represent the hypothesized relationships between perceived cultural exclusion and political efficacy. The DAG formalizes assumptions about potential confounders that may influence both the explanatory variable and the outcome, helping to guide model specification and control variable selection.
+
+### **Variable Definitions**
+
+The variables used in this analysis are drawn from the European Social Survey and are referenced using their original variable names from the dataset. For clarity, the key variables are defined below.
+
+-   **Political efficacy (`psppsgva`)**: Respondents’ self-reported confidence in their ability to participate in politics, measured on an 11-point scale ranging from 0 (not at all confident) to 10 (completely confident).
+
+-   **Cultural exclusion index (`exclusion_index`)**: A composite index constructed by averaging responses to multiple questions capturing experiences of discrimination and social exclusion, including perceived discrimination based on race, nationality, religion, language, and feelings of social distance. Higher values indicate greater perceived cultural exclusion.
+
+-   **Age (`agea`)**: Respondents’ age in years at the time of the survey.
+
+-   **Gender (`gndr`)**: Respondents’ self-reported gender.
+
+-   **Years of education (`eduyrs`)**: Total number of years of full-time education completed by the respondent.
+
+-   **Household income (`hinctnta`)**: Respondents’ self-reported household income decile within their country, with higher values indicating higher relative household income.
+
+-   **Country (`cntry`)**: Respondents’ country of residence at the time of the survey.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(dagitty)
+
+# Ensuring the DAG design does not change
+set.seed(1111111)
+
+dag <- dagitty("
+dag {
+  agea -> exclusion_index
+  agea -> psppsgva
+  
+  gndr -> exclusion_index
+  gndr -> psppsgva
+  
+  eduyrs -> exclusion_index
+  eduyrs -> psppsgva
+  
+  hinctnta -> exclusion_index
+  hinctnta -> psppsgva
+  
+  cntry -> exclusion_index
+  cntry -> psppsgva
+  
+  exclusion_index -> psppsgva
+}
+")
+
+plot(dag)
+```
+
+As shown in the DAG above, perceived cultural exclusion is hypothesized to influence political efficacy among first-generation immigrants. Several individual-level characteristics, including age, gender, education, household income, and country context, may affect both experiences of exclusion and levels of political efficacy. The remainder of this paper examines how these variables relate to political efficacy and assesses whether cultural exclusion exhibits a strong association with political efficacy after accounting for these factors.
+
+## Model Fitting and Hypothesis Testing
+
+To formally evaluate the relationship between perceived cultural exclusion and political efficacy, a series of linear regression models are estimated. Political efficacy serves as the outcome variable, while the cultural exclusion index is the primary explanatory variable. Models are estimated sequentially to assess the robustness of the relationship, beginning with a bivariate specification and progressively adding individual-level controls and country fixed effects.
+
+### Baseline Model Regression
+
+The baseline model estimates the bivariate association between cultural exclusion and political efficacy, without adjusting for additional covariates.
+
+```{r}
+model1 <- lm(psppsgva ~ exclusion_index, data = ess_clean)
+summary(model1)
+confint(model1)
+```
+
+### Model with Individual-Level Controls
+
+The second model includes individual-level control variables that may confound the relationship between cultural exclusion and political efficacy. These controls include age, gender, years of education, and household income. Including these variables helps isolate the association between exclusion and political efficacy from demographic and socioeconomic factors.
+
+```{r}
+model2 <- lm(psppsgva ~ exclusion_index + agea + gndr + eduyrs + hinctnta, 
+             data = ess_clean)
+
+summary(model2)
+confint(model2)
+
+```
+
+### Model with Country Fixed Effects
+
+The final model further accounts for unobserved country-level differences by including country fixed effects. This specification controls for time-invariant national characteristics, such as political culture or institutional context, that may influence both perceived exclusion and political efficacy. This model serves as the primary specification for hypothesis testing.
+
+```{r}
+model3 <- lm(psppsgva ~ exclusion_index + agea + gndr + eduyrs + hinctnta + factor(cntry),
+             data = ess_clean)
+
+summary(model3)
+confint(model3)
+```
+
+### Regression Results Summary
+
+Across all model specifications, the coefficient on the cultural exclusion index remains negative, indicating that higher perceived exclusion is associated with lower political efficacy. In the final model with individual-level controls and country fixed effects, the estimated association remains statistically significant, providing support for the hypothesis that perceived cultural exclusion is negatively related to political efficacy among first-generation immigrants.
+
+## Diagnostics and Model Evaluation
+
+Diagnostic checks are conducted to evaluate whether the assumptions of the linear regression model are reasonably satisfied. These include assessments of linearity, homoscedasticity, normality of residuals, and the presence of influential observations. The diagnostics are performed using the final regression model with individual-level controls and country fixed effects.
+
+```{r}
+#Ensure single-plot layout
+par(mfrow = c(1, 1))
+
+#Residuals vs Fitted
+plot(model3, which = 1)
+
+#Normal Q-Q
+plot(model3, which = 2)
+
+#Scale-Location
+plot(model3, which = 3)
+
+#Residuals vs Leverage
+plot(model3, which = 5)
+#Report R-squared and Adjusted R-squared
+summary(model3)$r.squared
+summary(model3)$adj.r.squared
+
+```
+
+### Residuals vs Fitted
+
+The red smoothed line shows a downward trend rather than remaining flat at zero, indicating a systematic relationship between fitted values and residuals. This suggests that the linear model may misestimate political efficacy at different levels of the fitted values, pointing to mild violations of the linearity assumption.
+
+### Q-Q Residuals
+
+The Q–Q plot compares the standardized residuals to a normal distribution. While residuals closely follow the reference line in the center, they deviate upward in the upper tail. This pattern indicates right-skewness and suggests violations of the normality assumption driven by extreme values rather than the overall distribution.
+
+### Scale - Location
+
+The scale–location plot examines whether the variance of the residuals is constant across fitted values. Ideally, the red smoothed line should be approximately horizontal, indicating homoskedasticity. In this plot, the red line shows a slight upward trend, suggesting that the spread of residuals increases as fitted values rise. This pattern indicates mild heteroskedasticity, meaning that the model’s prediction errors are larger at higher levels of political efficacy.
+
+### Residuals vs Fitted Values
+
+The residuals versus leverage plot assesses whether any observations exert disproportionate influence on the regression results. In this plot, most observations cluster at low leverage values with residuals centered around zero. Although a small number of observations display moderately higher leverage, none appear extreme or isolated.
+
+Overall, this suggests that the model is not driven by a small number of influential cases and that the estimated relationships are relatively stable across observations.
+
+### R-Squared
+
+The R-squared from the multiple regression model is 0.0868, while the adjusted R-squared is 0.0769. The R-squared indicates that the model explains a modest proportion of the variation in political efficacy. This suggests that perceived cultural exclusion and the included demographic predictors capture some, but not most, of the variation in political efficacy among first-generation immigrants. While the overall model fit is limited, this is consistent with prior research on political attitudes, which are shaped by a wide range of social and contextual factors beyond those included in the model.
+
+## Limitations
+
+This study has several limitations. First, the use of cross-sectional survey data limits the ability to make causal claims about the relationship between cultural exclusion and political efficacy. Although the analysis is informed by a directed acyclic graph, unobserved factors such as political interest or prior socialization may influence both perceived exclusion and political efficacy.
+Second, the measures of cultural exclusion and political efficacy are based on self-reported survey responses and may be subject to reporting bias. Additionally, the cultural exclusion index combines multiple dimensions of exclusion into a single measure, which may mask differences in how specific forms of exclusion relate to political efficacy. Finally, while country fixed effects account for broad national differences, they do not capture within-country variation or changes over time.
+
+## Conclusion
+
+This study finds a negative association between perceived cultural exclusion and political efficacy among first-generation immigrants in Europe. Even after accounting for individual characteristics and country fixed effects, higher levels of exclusion are linked to lower confidence in understanding political processes. These findings highlight the importance of social inclusion for democratic engagement. Beyond formal political rights, immigrants’ everyday experiences of belonging and exclusion appear to shape political attitudes in meaningful ways. Addressing cultural exclusion may therefore be an important component of fostering more inclusive and participatory democratic societies.
+
+## Bibliography
+
+Bloemraad, I. (2006). *Becoming a citizen: Incorporating immigrants and refugees in the United States and Canada*. University of California Press.
+
+Campbell, A., Gurin, G., & Miller, W. E. (1954). *The voter decides*. Row, Peterson and Company.
+
+European Social Survey (ESS). (2020). *European Social Survey Round 10 Data* (Edition 3.2). ESS ERIC. https://www.europeansocialsurvey.org
+
+Bilodeau, A. (2008). Immigrant political participation in host countries. *World Politics*, 60(1), 152–178.
+*(Empirical evidence on immigrant political engagement.)*
+
+Maxwell, R. (2010). Political participation in Europe’s immigrant societies. *West European Politics, 33*(4), 773–793.
+
+Verba, S., Schlozman, K. L., & Brady, H. E. (1995). *Voice and equality: Civic voluntarism in American politics*. Harvard University Press.
